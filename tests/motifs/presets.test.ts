@@ -42,7 +42,14 @@ describe('프리셋 (명세 4장)', () => {
     for (let i = 1; i < bars.length; i++) expect(bars[i].w).toBeGreaterThan(bars[i - 1].w);
   });
 
+  // 소수점 6자리로 반올림: Math.pow 결과가 플랫폼·Node 버전마다 마지막 자리에서 달라져 CI(Linux)와 로컬(Mac)이 어긋난다
+  const round = (v: unknown): unknown =>
+    typeof v === 'number' ? Math.round(v * 1e6) / 1e6
+    : Array.isArray(v) ? v.map(round)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, round(x)]))
+    : v;
+
   it.each(PRESETS.map((p) => p.id))('%s 지오메트리 스냅샷', (id) => {
-    expect(render(id)).toMatchSnapshot();
+    expect(round(render(id))).toMatchSnapshot();
   });
 });

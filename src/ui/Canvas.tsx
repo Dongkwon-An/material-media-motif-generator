@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react';
 import { CAPTIONS } from '../content/captions';
 import { attachInput } from '../engine/input';
 import { createScene, exploreScene } from '../engine/scene';
+import { registerStage } from '../export/export';
 import { VirtualScroll } from '../engine/scroll';
 import { MOTIF_ORDER } from '../motifs';
 import type { MotifType } from '../motifs/types';
 import { Canvas2DRenderer } from '../render/canvas2d';
+import type { Layer } from '../render/Renderer';
 import { useStore } from '../store';
 import type { Page } from './router';
 
@@ -29,6 +31,8 @@ export function Canvas({ page }: { page: Page }) {
     let last = performance.now();
     let raf = 0;
     let shownStage: MotifType | null = null;
+    /** 마지막으로 그린 레이어 (SVG Export용) */
+    let drawn: readonly Layer[] = [];
 
     const ro = new ResizeObserver(([entry]) => {
       size.w = entry.contentRect.width;
@@ -67,16 +71,19 @@ export function Canvas({ page }: { page: Page }) {
       if (page === 'explore') {
         const { layers, sequence } = exploreScene(s, size.w, size.h, clock, scroll.current);
         showCaption(sequence ? sequence.stage : null);
-        renderer.render(layers);
+        drawn = layers;
       } else {
         if (hintRef.current) hintRef.current.hidden = s.create.shot !== null;
-        renderer.render(createScene(s.create, size.w, size.h, now, clock, scroll.current));
+        drawn = createScene(s.create, size.w, size.h, now, clock, scroll.current);
       }
+      renderer.render(drawn);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
+    const unregister = registerStage({ canvas, frame: () => ({ w: size.w, h: size.h, layers: drawn }) });
 
     return () => {
+      unregister();
       cancelAnimationFrame(raf);
       detach();
       ro.disconnect();

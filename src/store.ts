@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { hash } from './engine/rng';
+import { sharedFromLocation } from './export/share';
 import { defaultMotif } from './motifs';
 import { makeRecipe } from './motifs/hybrid';
 import type { AppState, BlendKind, CreateState, MotifParams, MotifType } from './motifs/types';
@@ -87,11 +88,14 @@ function aimAt(p: MotifParams, local: { x: number; y: number }): MotifParams {
   return p;
 }
 
+// 공유 URL(?s=…)로 열었으면 그 설정으로 시작한다
+const shared = sharedFromLocation();
+
 export const useStore = create<Store>()((set) => ({
-  baseSeed: randomSeed(),
-  mode: 'normal',
-  motif: defaultMotif('stack'),
-  create: initialCreate(),
+  baseSeed: shared?.baseSeed ?? randomSeed(),
+  mode: shared?.mode ?? 'normal',
+  motif: shared?.motif ?? defaultMotif('stack'),
+  create: shared?.create ?? initialCreate(),
   scrollY: 0,
   exhibition: { enabled: false, state: 'active' },
   ui: { sidebarOpen: true, paused: false, scrollSensitivity: 1 },

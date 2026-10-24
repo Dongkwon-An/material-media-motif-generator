@@ -398,6 +398,9 @@ input[type='range']::-moz-range-thumb {
   text-transform: uppercase;
   cursor: pointer;
 }
+.mm-export { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mm-export__status { word-break: break-all; }
+
 .mm-btn:hover, .mm-chip:not(:disabled):hover { background: var(--mm-light); }
 
 :focus-visible { outline: 1px solid var(--mm-blue); outline-offset: 2px; }

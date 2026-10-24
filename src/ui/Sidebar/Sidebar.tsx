@@ -5,8 +5,9 @@ import type { MotifType } from '../../motifs/types';
 import { MAX_MIX_LAYERS, editedMotif, useStore, type EditTarget } from '../../store';
 import { PAGE_PATH, navigate, type Page } from '../router';
 import { Segmented, Slider, Toggle, pct } from './controls';
+import { ExportPanel } from './ExportPanel';
 import { MotifOptions } from './MotifOptions';
-import { Pending, Section } from './Section';
+import { Section } from './Section';
 
 const LABELS: Record<MotifType, string> = { stack: 'Stack', pull: 'Pull', wave: 'Wave', spread: 'Spread', portal: 'Portal' };
 const PAGES: { page: Page; label: string }[] = [
@@ -184,7 +185,7 @@ export function Sidebar({ page }: { page: Page }) {
         </Section>
 
         <Section title="Export" defaultOpen={false}>
-          <Pending label="PNG / SVG / Video / URL" phase="P5" />
+          <ExportPanel />
         </Section>
       </div>
     </aside>

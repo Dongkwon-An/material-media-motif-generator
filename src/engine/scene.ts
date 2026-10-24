@@ -30,7 +30,7 @@ function fullBars(p: MotifParams, bounds: Rect, time: number, scrollY: number, s
 
 /**
  * Explore 페이지: 현재 모티프가 화면 전체를 채운다.
- *  normal: 화면 높이 주기 세로 반복 (Portal은 줌, Pull은 제자리에서 서랍 여닫기)
+ *  normal: 화면 높이 주기 세로 반복 (Portal은 줌, Pull은 제자리에서 서랍 여닫기: side는 옆으로, top은 아래로)
  *  sequence: 스크롤 진행도로 다섯 모티프를 순서대로 보간
  */
 export function exploreScene(
@@ -51,7 +51,7 @@ export function exploreScene(
   const p = s.motif;
   const bars =
     p.type === 'pull'
-      ? pullDrawers(MOTIFS.pull(p, { progress: 1, time }, bounds, s.baseSeed), p.view === 'side' ? p.align : 'left', scrollY / h)
+      ? pullDrawers(MOTIFS.pull(p, { progress: 1, time }, bounds, s.baseSeed), p.view === 'side' ? p.align : 'down', scrollY / h)
       : fullBars(p, bounds, time, scrollY, s.baseSeed);
   return { layers: [{ bars }], sequence: null };
 }

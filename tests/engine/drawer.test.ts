@@ -53,3 +53,31 @@ describe('Explore · Pull', () => {
     expect(open.map((b) => b.x)).not.toEqual(closed.map((b) => b.x));
   });
 });
+
+describe('pullDrawers · top (아래로 열림)', () => {
+  const topBar = (y: number, h: number): Bar => ({
+    x: 0, y, w: 800, h, opacity: 1, gradient: { axis: 'v', blueAt: 'end', highlightStop: 0.68 }, cap: { side: 'top', ratio: 0.2 },
+  });
+
+  it('위쪽 선은 그대로, 닫히면 캡 두께만 남는다', () => {
+    const [b] = pullDrawers([topBar(100, 50)], 'down', 0);
+    expect(b.y).toBe(100);
+    expect(b.h).toBeCloseTo(10);
+    expect(b.h * b.cap!.ratio).toBeCloseTo(10);
+  });
+
+  it('열리는 동안 캡 두께는 유지되고 높이는 아래로 늘어난다', () => {
+    const [b] = pullDrawers([topBar(100, 50)], 'down', 0.2);
+    expect(b.h).toBeGreaterThan(10);
+    expect(b.h).toBeLessThan(50);
+    expect(b.h * b.cap!.ratio).toBeCloseTo(10);
+  });
+
+  it('Explore에서 top 뷰는 아래로 열린다 (x·y 고정, 높이만 변화)', () => {
+    const s = { baseSeed: 1, mode: 'normal' as const, motif: { ...defaultMotif('pull'), view: 'top' as const } };
+    const closed = exploreScene(s, 1000, 600, 0, 0).layers[0].bars;
+    const open = exploreScene(s, 1000, 600, 0, 600).layers[0].bars;
+    expect(closed.map((b) => [b.x, b.y])).toEqual(open.map((b) => [b.x, b.y]));
+    closed.forEach((b, i) => expect(b.h).toBeLessThan(open[i].h));
+  });
+});

@@ -3,6 +3,7 @@ import { hybridBars } from '../motifs/hybrid';
 import { sequenceBars, type SequenceState } from '../motifs/sequence';
 import type { AppState, Bar, CreateState, MotifParams, Rect } from '../motifs/types';
 import type { Layer } from '../render/Renderer';
+import { pullDrawers } from './drawer';
 import { clamp01, mod } from './easing';
 import { hash } from './rng';
 import { REVEAL_DURATION, revealFrom } from './reveal';
@@ -29,7 +30,7 @@ function fullBars(p: MotifParams, bounds: Rect, time: number, scrollY: number, s
 
 /**
  * Explore 페이지: 현재 모티프가 화면 전체를 채운다.
- *  normal: 화면 높이 주기 세로 반복 (Portal은 줌)
+ *  normal: 화면 높이 주기 세로 반복 (Portal은 줌, Pull은 제자리에서 서랍 여닫기)
  *  sequence: 스크롤 진행도로 다섯 모티프를 순서대로 보간
  */
 export function exploreScene(
@@ -47,7 +48,12 @@ export function exploreScene(
     const { bars, state } = sequenceBars(s.motif, scrollY / (h * SEQUENCE_SEGMENT), { progress: 1, time }, bounds, s.baseSeed);
     return { layers: [{ bars }], sequence: state };
   }
-  return { layers: [{ bars: fullBars(s.motif, bounds, time, scrollY, s.baseSeed) }], sequence: null };
+  const p = s.motif;
+  const bars =
+    p.type === 'pull'
+      ? pullDrawers(MOTIFS.pull(p, { progress: 1, time }, bounds, s.baseSeed), p.view === 'side' ? p.align : 'left', scrollY / h)
+      : fullBars(p, bounds, time, scrollY, s.baseSeed);
+  return { layers: [{ bars }], sequence: null };
 }
 
 /**

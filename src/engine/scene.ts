@@ -1,5 +1,5 @@
 import { MOTIFS } from '../motifs';
-import { pullTopStream } from '../motifs/pull';
+import { pullTopAt, pullTopStream } from '../motifs/pull';
 import { waveBars } from '../motifs/wave';
 import { hybridBars } from '../motifs/hybrid';
 import { sequenceBars, type SequenceState } from '../motifs/sequence';
@@ -82,6 +82,7 @@ export function exploreScene(
 
 /**
  * Create 페이지: 클릭 전에는 빈 화면. 클릭하면 클릭 지점에서 화면 가득 펼쳐지고, 이후 사이드바 조정은 그대로 반영된다.
+ *  (Pull top만 예외: 위에서부터 서랍이 하나씩 내려오며 펼쳐진다)
  *  single: 모티프 1개
  *  mix: 레이어마다 화면 전체 패턴을 만든 뒤 레시피대로 섞는다 (Portal이 섞이면 반복 없이 스크롤 = 줌)
  * @param now 펼쳐지는 모션용 실시간 시계 (일시정지와 무관)
@@ -96,7 +97,12 @@ export function createScene(c: CreateState, w: number, h: number, now: number, c
   const reach = Math.hypot(Math.max(shot.origin.x, w - shot.origin.x), Math.max(shot.origin.y, h - shot.origin.y));
 
   if (c.kind === 'single') {
-    return [{ bars: revealFrom(fullBars(c.single, bounds, time, scrollY, shot.seed), shot.origin, progress, reach) }];
+    const p = c.single;
+    // Pull top(위에서 내려다본 서랍)은 클릭 지점과 무관하게 위에서부터 서랍이 하나씩 열리며 내려온다
+    if (p.type === 'pull' && p.view === 'top' && progress < 1) {
+      return [{ bars: tile(pullTopAt(p, bounds, shot.seed, progress), h, scrollY) }];
+    }
+    return [{ bars: revealFrom(fullBars(p, bounds, time, scrollY, shot.seed), shot.origin, progress, reach) }];
   }
 
   const frame = { progress: 1, time };

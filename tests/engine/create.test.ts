@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { REVEAL_DURATION, revealFrom } from '../../src/engine/reveal';
 import { createScene } from '../../src/engine/scene';
 import { defaultMotif } from '../../src/motifs';
-import type { Bar } from '../../src/motifs/types';
+import type { Bar, MotifParams } from '../../src/motifs/types';
 import { MAX_MIX_LAYERS, useStore } from '../../src/store';
 
 describe('revealFrom', () => {
@@ -101,5 +101,27 @@ describe('store: Create', () => {
     expect(useStore.getState().create.mix.layers).toHaveLength(MAX_MIX_LAYERS);
     for (let i = 0; i < 6; i++) useStore.getState().removeMixLayer(0);
     expect(useStore.getState().create.mix.layers).toHaveLength(1);
+  });
+});
+
+describe('Create · Pull top 펼침', () => {
+  const at = (t: number) => {
+    const s = useStore.getState();
+    useStore.setState({ create: { ...s.create, kind: 'single', single: { ...defaultMotif('pull'), view: 'top', count: 6 } as MotifParams } });
+    useStore.getState().shoot({ x: 900, y: 300 }, 0, { x: 0.9, y: 0.5 });
+    return createScene(useStore.getState().create, 1000, 600, t, 0, 0)[0].bars;
+  };
+
+  it('좌우로 늘어나지 않고 위에서부터 내려온다 (바는 항상 화면 폭 전체, 아래쪽은 아직 비어 있음)', () => {
+    const mid = at(REVEAL_DURATION * 0.4).filter((b) => b.y < 600);
+    expect(mid.every((b) => b.x === 0 && b.w === 1000)).toBe(true);
+    expect(Math.max(...mid.map((b) => b.y + b.h))).toBeLessThan(500);
+  });
+
+  it('펼침이 끝나면 완성 화면과 같다', () => {
+    const almost = at(REVEAL_DURATION * 0.9999);
+    const done = at(REVEAL_DURATION + 1);
+    expect(almost.length).toBeGreaterThanOrEqual(done.length);
+    done.forEach((b, i) => expect(almost[i].h).toBeCloseTo(b.h, 0));
   });
 });

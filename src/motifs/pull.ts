@@ -40,7 +40,18 @@ const STREAM_FILL = 1;
  * side와 같은 주기(drawerCycle)로: 화면 높이만큼 스크롤하면 정적 top 레이아웃으로 꽉 차고, 잠시 머문 뒤
  * 맨 위 서랍부터 다시 들어가 빈 화면이 되고, 이를 반복한다.
  */
-export function pullTopStream(p: Extract<MotifParams, { type: 'pull' }>, b: Rect, seed: number, scrollY: number): Bar[] {
+export function pullTopStream(p: PullParams, b: Rect, seed: number, scrollY: number): Bar[] {
+  if (scrollY <= 0) return [];
+  return pullTopAt(p, b, seed, drawerCycle(scrollY / (b.h * STREAM_FILL)));
+}
+
+type PullParams = Extract<MotifParams, { type: 'pull' }>;
+
+/**
+ * top 뷰 서랍이 위에서부터 열리며 내려오는 중간 상태.
+ * @param fill 0 = 빈 화면, 1 = 정적 top 레이아웃으로 꽉 참 (Explore 스크롤 · Create 클릭 펼침이 함께 쓴다)
+ */
+export function pullTopAt(p: PullParams, b: Rect, seed: number, fill: number): Bar[] {
   const rng = mulberry32(seed);
   const n = resolveCount(p.count, p.complexity, 4, 16, rng);
   const grow = (x: number) => (p.curve === 'exp' ? Math.pow(1 + p.growth, x) : 1 + p.growth * x);
@@ -50,9 +61,8 @@ export function pullTopStream(p: Extract<MotifParams, { type: 'pull' }>, b: Rect
   const base = Math.max(0, b.h - 2 * edge - p.gap * (n - 1)) / sum;
 
   /** 지금까지 태어난 서랍 수 (연속값) */
-  if (scrollY <= 0 || base <= 0) return [];
-  const born = drawerCycle(scrollY / (b.h * STREAM_FILL)) * n;
-  if (born <= 0) return [];
+  const born = fill * n;
+  if (born <= 0 || base <= 0) return [];
 
   const bars: Bar[] = [];
   let y = b.y + edge;

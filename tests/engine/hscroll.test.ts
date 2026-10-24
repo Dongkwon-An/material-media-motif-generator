@@ -7,7 +7,7 @@ const W = 1000;
 const H = 600;
 const scene = (motif: MotifParams, scrollX: number, scrollY = 0) =>
   exploreScene({ baseSeed: 3, mode: 'normal', motif }, W, H, 0, scrollY, scrollX).layers[0].bars;
-const onScreen = (bars: Bar[]) => bars.filter((b) => b.x + b.w > 0 && b.x < W && b.y + b.h > 0 && b.y < H);
+const onScreen = (bars: readonly Bar[]) => bars.filter((b) => b.x + b.w > 0 && b.x < W && b.y + b.h > 0 && b.y < H);
 
 describe('Explore 좌우 스크롤', () => {
   it('가로 스크롤 0이면 화면은 이전과 같다', () => {

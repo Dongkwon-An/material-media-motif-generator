@@ -3,7 +3,7 @@ import { clamp01, easeInOutCubic, mod } from './easing';
 
 // Explore · Pull · side: 스크롤하면 서랍이 위에서부터 차례로 화면 가장자리에서 당겨져 나오고,
 // 잠시 열린 채로 있다가 다시 위에서부터 차례로 들어간다. 위로 스크롤하면 거꾸로 진행.
-// (top 뷰는 pull.ts의 pullTopStream)
+// (top 뷰는 pull.ts의 pullTopStream이 같은 주기를 drawerCycle로 쓴다)
 // 한 주기 = 열기 OPEN + 유지 HOLD + 닫기 OPEN + 유지 HOLD (단위: 화면 높이만큼의 스크롤)
 
 const OPEN = 1;
@@ -13,6 +13,15 @@ export const DRAWER_CYCLE = 2 * (OPEN + HOLD);
 const SPAN = 0.45;
 /** 닫혀 있을 때 가장자리에 남는 손잡이: 가장 긴 바 너비 대비 비율 (모든 서랍이 같은 폭) */
 const STUB = 0.04;
+
+/** 주기 위치 → 전체가 열린 정도 0~1: 열기 → 유지 → 닫기 → 유지 (서랍별 차례 지연 없음) */
+export function drawerCycle(cycle: number): number {
+  const c = mod(cycle, DRAWER_CYCLE);
+  if (c < OPEN) return c / OPEN;
+  if (c < OPEN + HOLD) return 1;
+  if (c < 2 * OPEN + HOLD) return 1 - (c - OPEN - HOLD) / OPEN;
+  return 0;
+}
 
 /** 주기 위치 → 서랍 i가 열린 정도 0~1 */
 export function drawerOpenness(i: number, n: number, cycle: number): number {

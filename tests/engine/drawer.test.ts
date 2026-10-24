@@ -74,6 +74,17 @@ describe('Explore · Pull · top (위에서 밀려 내려오는 서랍)', () => 
     });
   });
 
+  it('꽉 찬 뒤 잠시 머물고, 다시 비워졌다가 반복한다 (side와 같은 주기)', () => {
+    const full = bars(600);
+    expect(bars(700)).toEqual(full);
+    expect(bars(600 * 1.35 + 300).length).toBeLessThan(full.length);
+    expect(bars(600 * 2.4)).toEqual([]);
+    const again = bars(600 * DRAWER_CYCLE + 250);
+    const first = bars(250);
+    expect(again.length).toBe(first.length);
+    again.forEach((b, i) => expect(b.h).toBeCloseTo(first[i].h));
+  });
+
   it('맨 위 서랍이 가장 작고 아래로 갈수록 크며, 계속 내리면 기존 서랍이 커진다', () => {
     const b = bars(500).filter((x) => x.h > 1);
     for (let i = 1; i < b.length; i++) expect(b[i].h).toBeGreaterThan(b[i - 1].h);

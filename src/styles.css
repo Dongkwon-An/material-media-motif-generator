@@ -46,6 +46,8 @@ html, body, #root {
   color: var(--mm-blue);
   font-family: var(--mm-font);
   -webkit-font-smoothing: antialiased;
+  /* 트랙패드 좌우 스와이프가 브라우저 뒤로/앞으로 가기가 되지 않도록 */
+  overscroll-behavior-x: none;
 }
 
 button { font: inherit; color: inherit; }

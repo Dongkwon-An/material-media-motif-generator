@@ -1,8 +1,9 @@
 import { MOTIFS } from '../motifs';
 import { pullTopStream } from '../motifs/pull';
+import { waveBars } from '../motifs/wave';
 import { hybridBars } from '../motifs/hybrid';
 import { sequenceBars, type SequenceState } from '../motifs/sequence';
-import type { AppState, Bar, CreateState, MotifParams, Rect } from '../motifs/types';
+import type { AppState, Bar, CreateState, MotifParams, MotifType, Rect } from '../motifs/types';
 import type { Layer } from '../render/Renderer';
 import { pullDrawers } from './drawer';
 import { clamp01, mod } from './easing';
@@ -23,15 +24,36 @@ const tile = (bars: Bar[], h: number, scrollY: number): Bar[] => {
   return [...shift(bars, 0, -off), ...shift(bars, 0, h - off)];
 };
 
-/** 화면 전체를 채우는 모티프 1개. M1~M4는 세로 반복, M5(Portal)는 스크롤을 줌(흐름)으로만 쓴다. */
-function fullBars(p: MotifParams, bounds: Rect, time: number, scrollY: number, seed: number): Bar[] {
-  const bars = MOTIFS[p.type](p, { progress: 1, time }, bounds, seed);
+/**
+ * 가로 반복: period 주기로 옆에 이어 붙인다.
+ * 가로 Wave는 양 끝에 gap/2 여백이 있어 화면 폭 그대로, 끝까지 꽉 찬 Spread·Portal은 이음매에 gap만큼 띄운다.
+ * (세로 Wave는 반복 대신 끝없는 한 줄로 이어진다: waveBars의 panX)
+ */
+const tileX = (bars: Bar[], period: number, scrollX: number): Bar[] => {
+  const off = mod(scrollX, period);
+  return [...shift(bars, -off, 0), ...shift(bars, period - off, 0)];
+};
+
+/** 좌우 스크롤로 이어 보는 모티프 */
+const H_SCROLL = new Set<MotifType>(['wave', 'spread', 'portal']);
+
+/**
+ * 화면 전체를 채우는 모티프 1개. M1~M4는 세로 반복, M5(Portal)는 세로 스크롤을 줌(흐름)으로만 쓴다.
+ * Wave·Spread·Portal은 좌우 스크롤로 옆으로도 이어진다 (scrollX, Explore만).
+ */
+function fullBars(p: MotifParams, bounds: Rect, time: number, scrollY: number, seed: number, scrollX = 0): Bar[] {
+  const frame = { progress: 1, time };
+  if (p.type === 'wave' && p.orientation === 'vertical') return tile(waveBars(p, frame, bounds, seed, scrollX), bounds.h, scrollY);
+  let bars = MOTIFS[p.type](p, frame, bounds, seed);
+  if (H_SCROLL.has(p.type) && scrollX !== 0) {
+    bars = tileX(bars, p.type === 'wave' ? bounds.w : bounds.w + p.gap, scrollX);
+  }
   return p.type === 'portal' ? bars : tile(bars, bounds.h, scrollY);
 }
 
 /**
  * Explore 페이지: 현재 모티프가 화면 전체를 채운다.
- *  normal: 화면 높이 주기 세로 반복 (Portal은 줌, Pull side는 제자리에서 서랍 여닫기, Pull top은 위에서부터 서랍이 밀려 내려옴)
+ *  normal: 화면 높이 주기 세로 반복 (Wave·Spread·Portal은 좌우로도 반복) (Portal은 줌, Pull side는 제자리에서 서랍 여닫기, Pull top은 위에서부터 서랍이 밀려 내려옴)
  *  sequence: 스크롤 진행도로 다섯 모티프를 순서대로 보간
  */
 export function exploreScene(
@@ -40,6 +62,7 @@ export function exploreScene(
   h: number,
   clock: number,
   scrollY: number,
+  scrollX = 0,
 ): { layers: Layer[]; sequence: SequenceState | null } {
   if (w <= 0 || h <= 0) return { layers: [], sequence: null };
   const time = clock + scrollY * SCROLL_TO_TIME;
@@ -51,7 +74,7 @@ export function exploreScene(
   }
   const p = s.motif;
   const bars =
-    p.type !== 'pull' ? fullBars(p, bounds, time, scrollY, s.baseSeed)
+    p.type !== 'pull' ? fullBars(p, bounds, time, scrollY, s.baseSeed, scrollX)
     : p.view === 'top' ? pullTopStream(p, bounds, s.baseSeed, scrollY)
     : pullDrawers(MOTIFS.pull(p, { progress: 1, time }, bounds, s.baseSeed), p.align, scrollY / h);
   return { layers: [{ bars }], sequence: null };

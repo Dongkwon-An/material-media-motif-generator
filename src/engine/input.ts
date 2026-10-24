@@ -1,15 +1,21 @@
 // 입력 매핑 (명세 7.1). 포인터 이벤트로 마우스·터치를 통일한다.
 //  탭: 이동 10px 미만이면 누른 시간과 관계없이 탭 → onTap. 멀티터치면 손가락마다 따로.
-//  드래그: onDrag가 있으면 드래그로 패턴을 그리고(Create 페이지), 없으면 세로 스크롤(Explore 페이지).
-//  휠·트랙패드 → onScroll.
+//  드래그: onDrag가 있으면 드래그로 패턴을 그리고(Create 페이지), 없으면 스크롤(Explore 페이지).
+//  휠·트랙패드(좌우 스와이프, Shift+휠 포함) → onScroll(dx, dy).
+//  대각선 입력은 주된 축만 남긴다: 세로로 넘기다가 화면이 옆으로 흘러가지 않도록.
 
 const TAP_DIST = 10;
+/** 작은 쪽 축이 큰 쪽의 이 비율 미만이면 버린다 */
+const AXIS_LOCK = 0.5;
+
+const lockAxis = (dx: number, dy: number): [number, number] =>
+  Math.abs(dx) < Math.abs(dy) * AXIS_LOCK ? [0, dy] : Math.abs(dy) < Math.abs(dx) * AXIS_LOCK ? [dx, 0] : [dx, dy];
 
 export interface Point { x: number; y: number }
 
 export interface InputHandlers {
   onTap?(p: Point): void;
-  onScroll(delta: number): void;
+  onScroll(dx: number, dy: number): void;
   onDrag?: {
     start(id: number, from: Point): void;
     move(id: number, to: Point): void;
@@ -19,7 +25,7 @@ export interface InputHandlers {
 }
 
 export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
-  const pointers = new Map<number, { x0: number; y0: number; y: number; moved: boolean }>();
+  const pointers = new Map<number, { x0: number; y0: number; x: number; y: number; moved: boolean }>();
 
   const local = (e: PointerEvent): Point => {
     const r = el.getBoundingClientRect();
@@ -30,7 +36,7 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     el.setPointerCapture(e.pointerId);
     const { x, y } = local(e);
-    pointers.set(e.pointerId, { x0: x, y0: y, y, moved: false });
+    pointers.set(e.pointerId, { x0: x, y0: y, x, y, moved: false });
   };
 
   const move = (e: PointerEvent) => {
@@ -43,8 +49,9 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     }
     if (p.moved) {
       if (h.onDrag) h.onDrag.move(e.pointerId, pt);
-      else h.onScroll(p.y - pt.y);
+      else h.onScroll(...lockAxis(p.x - pt.x, p.y - pt.y));
     }
+    p.x = pt.x;
     p.y = pt.y;
   };
 
@@ -64,7 +71,8 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
 
   const wheel = (e: WheelEvent) => {
     e.preventDefault();
-    h.onScroll(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1));
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1;
+    h.onScroll(...lockAxis(e.deltaX * unit, e.deltaY * unit));
   };
 
   el.addEventListener('pointerdown', down);

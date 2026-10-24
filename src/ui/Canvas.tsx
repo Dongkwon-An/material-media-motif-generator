@@ -12,7 +12,7 @@ import { useStore } from '../store';
 import type { Page } from './router';
 
 // 캔버스 + rAF 루프. 매 프레임 store를 직접 읽어 React 리렌더 없이 그린다.
-//  explore: 현재 모티프(또는 Sequence)가 화면을 채우고 드래그·휠로 스크롤
+//  explore: 현재 모티프(또는 Sequence)가 화면을 채우고 드래그·휠로 스크롤 (Wave·Spread·Portal은 좌우로도)
 //  create: 클릭하면 사이드바에서 만든 조합이 클릭 지점에서 화면 전체로 펼쳐진다. 휠·드래그로 스크롤
 export function Canvas({ page }: { page: Page }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,6 +23,7 @@ export function Canvas({ page }: { page: Page }) {
     const canvas = canvasRef.current!;
     const renderer = new Canvas2DRenderer(canvas);
     const scroll = new VirtualScroll();
+    const scrollX = new VirtualScroll();
     const size = { w: 0, h: 0 };
     /** 실시간 시계: 펼쳐지는 모션 (일시정지와 무관) */
     let now = 0;
@@ -42,7 +43,11 @@ export function Canvas({ page }: { page: Page }) {
     ro.observe(canvas);
 
     const detach = attachInput(canvas, {
-      onScroll: (d) => scroll.add(d * useStore.getState().ui.scrollSensitivity),
+      onScroll: (dx, dy) => {
+        const k = useStore.getState().ui.scrollSensitivity;
+        scroll.add(dy * k);
+        scrollX.add(dx * k);
+      },
       onTap:
         page === 'create'
           ? (p) => useStore.getState().shoot(p, now, { x: p.x / size.w, y: p.y / size.h })
@@ -67,9 +72,10 @@ export function Canvas({ page }: { page: Page }) {
       const s = useStore.getState();
       if (!s.ui.paused) clock += dt;
       scroll.update(dt);
+      scrollX.update(dt);
 
       if (page === 'explore') {
-        const { layers, sequence } = exploreScene(s, size.w, size.h, clock, scroll.current);
+        const { layers, sequence } = exploreScene(s, size.w, size.h, clock, scroll.current, scrollX.current);
         showCaption(sequence ? sequence.stage : null);
         drawn = layers;
       } else {

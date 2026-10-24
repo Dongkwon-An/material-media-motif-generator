@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DRAWER_CYCLE, drawerOpenness, pullDrawers } from '../../src/engine/drawer';
 import { exploreScene } from '../../src/engine/scene';
-import { defaultMotif } from '../../src/motifs';
+import { MOTIFS, defaultMotif } from '../../src/motifs';
 import type { Bar } from '../../src/motifs/types';
 
 const bar = (y: number): Bar => ({
@@ -54,30 +54,36 @@ describe('Explore · Pull', () => {
   });
 });
 
-describe('pullDrawers · top (아래로 열림)', () => {
-  const topBar = (y: number, h: number): Bar => ({
-    x: 0, y, w: 800, h, opacity: 1, gradient: { axis: 'v', blueAt: 'end', highlightStop: 0.68 }, cap: { side: 'top', ratio: 0.2 },
+describe('Explore · Pull · top (위에서 밀려 내려오는 서랍)', () => {
+  const motif = { ...defaultMotif('pull'), view: 'top' as const, count: 6 };
+  const s = { baseSeed: 1, mode: 'normal' as const, motif };
+  const bars = (scrollY: number) => exploreScene(s, 1000, 600, 0, scrollY).layers[0].bars;
+
+  it('스크롤 0 이하면 빈 화면', () => {
+    expect(bars(0)).toEqual([]);
+    expect(bars(-300)).toEqual([]);
   });
 
-  it('위쪽 선은 그대로, 닫히면 캡 두께만 남는다', () => {
-    const [b] = pullDrawers([topBar(100, 50)], 'down', 0);
-    expect(b.y).toBe(100);
-    expect(b.h).toBeCloseTo(10);
-    expect(b.h * b.cap!.ratio).toBeCloseTo(10);
+  it('스크롤할수록 서랍이 늘어나고, 화면 높이만큼 스크롤하면 정적 top 레이아웃과 같다', () => {
+    expect(bars(150).length).toBeLessThan(bars(450).length);
+    const stat = MOTIFS.pull(motif, { progress: 1, time: 0 }, { x: 0, y: 0, w: 1000, h: 600 }, 1);
+    const full = bars(600);
+    stat.forEach((b, i) => {
+      expect(full[i].y).toBeCloseTo(b.y);
+      expect(full[i].h).toBeCloseTo(b.h);
+    });
   });
 
-  it('열리는 동안 캡 두께는 유지되고 높이는 아래로 늘어난다', () => {
-    const [b] = pullDrawers([topBar(100, 50)], 'down', 0.2);
-    expect(b.h).toBeGreaterThan(10);
-    expect(b.h).toBeLessThan(50);
-    expect(b.h * b.cap!.ratio).toBeCloseTo(10);
+  it('맨 위 서랍이 가장 작고 아래로 갈수록 크며, 계속 내리면 기존 서랍이 커진다', () => {
+    const b = bars(500).filter((x) => x.h > 1);
+    for (let i = 1; i < b.length; i++) expect(b[i].h).toBeGreaterThan(b[i - 1].h);
+    // 맨 처음 들어온 서랍(맨 아래)은 스크롤할수록 커지며 내려간다
+    const first = (y: number) => bars(y).at(-1)!;
+    expect(first(400).h).toBeGreaterThan(first(200).h);
+    expect(first(400).y).toBeGreaterThan(first(200).y);
   });
 
-  it('Explore에서 top 뷰는 아래로 열린다 (x·y 고정, 높이만 변화)', () => {
-    const s = { baseSeed: 1, mode: 'normal' as const, motif: { ...defaultMotif('pull'), view: 'top' as const } };
-    const closed = exploreScene(s, 1000, 600, 0, 0).layers[0].bars;
-    const open = exploreScene(s, 1000, 600, 0, 600).layers[0].bars;
-    expect(closed.map((b) => [b.x, b.y])).toEqual(open.map((b) => [b.x, b.y]));
-    closed.forEach((b, i) => expect(b.h).toBeLessThan(open[i].h));
+  it('위아래로 움직여도 같은 스크롤 위치면 같은 화면 (거꾸로 재생)', () => {
+    expect(bars(321)).toEqual(bars(321));
   });
 });
